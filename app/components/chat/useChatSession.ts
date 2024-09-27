@@ -2,7 +2,7 @@
 
 import { useBotStore } from "@/app/store/bot";
 import { useChat } from "ai/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { useClientConfig } from "@/cl/app/components/ui/chat/hooks/use-config";
 
 // Combine useChat and useBotStore to manage chat session
@@ -14,6 +14,18 @@ export function useChatSession() {
 
   const [isFinished, setIsFinished] = useState(false);
   const { backend } = useClientConfig();
+
+  const currentBotIdRef = useRef(bot.id);
+
+  const chatBody = useMemo(
+    () => ({
+      context: bot.context,
+      modelConfig: bot.modelConfig,
+      datasource: bot.datasource,
+    }),
+    [bot.context, bot.modelConfig, bot.datasource],
+  );
+
   const {
     messages,
     setMessages,
@@ -30,11 +42,7 @@ export function useChatSession() {
     headers: {
       "Content-Type": "application/json", // using JSON because of vercel/ai 2.2.26
     },
-    body: {
-      context: bot.context,
-      modelConfig: bot.modelConfig,
-      datasource: bot.datasource,
-    },
+    body: chatBody,
     onError: (error: unknown) => {
       if (!(error instanceof Error)) throw error;
       const message = JSON.parse(error.message);
@@ -43,27 +51,25 @@ export function useChatSession() {
     onFinish: () => setIsFinished(true),
   });
 
-  // load chat history from session when component mounts
-  const loadChatHistory = useCallback(() => {
-    setMessages(session.messages);
-  }, [session, setMessages]);
+  // load chat history from session when component mounts or bot changes
+  useEffect(() => {
+    if (currentBotIdRef.current !== bot.id) {
+      setMessages(session.messages);
+      currentBotIdRef.current = bot.id;
+    }
+  }, [bot.id, session.messages, setMessages]);
 
   // sync chat history with bot session when finishing streaming
-  const syncChatHistory = useCallback(() => {
-    if (messages.length === 0) return;
-    updateBotSession((session) => (session.messages = messages), bot.id);
-  }, [messages, updateBotSession, bot.id]);
-
-  useEffect(() => {
-    loadChatHistory();
-  }, [loadChatHistory]);
-
   useEffect(() => {
     if (isFinished) {
-      syncChatHistory();
+      if (messages.length > 0) {
+        updateBotSession((session) => {
+          session.messages = messages;
+        }, bot.id);
+      }
       setIsFinished(false);
     }
-  }, [isFinished, setIsFinished, syncChatHistory]);
+  }, [isFinished, messages, updateBotSession, bot.id]);
 
   return {
     messages,

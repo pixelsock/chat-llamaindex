@@ -3,6 +3,7 @@
 import { useBotStore } from "@/app/store/bot";
 import { useChatSession } from "./useChatSession";
 import { ChatMessages, ChatInput } from "@/cl/app/components/ui/chat";
+import { useMemo, useCallback } from "react";
 
 // Custom ChatSection for ChatLlamaindex
 export default function ChatSection() {
@@ -18,7 +19,12 @@ export default function ChatSection() {
     setInput,
   } = useChatSession();
   const botStore = useBotStore();
-  const bot = botStore.currentBot();
+  const bot = useMemo(() => botStore.currentBot(), [botStore]);
+
+  const onFileError = useCallback((errMsg: string) => {
+    alert(errMsg);
+  }, []);
+
   return (
     <div className="space-y-4 w-full h-full flex flex-col">
       <ChatMessages
@@ -37,7 +43,7 @@ export default function ChatSection() {
         append={append}
         setInput={setInput}
         requestParams={{ datasource: bot.datasource }}
-        onFileError={(errMsg) => alert(errMsg)}
+        onFileError={onFileError}
       />
     </div>
   );
