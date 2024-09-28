@@ -1,5 +1,6 @@
 import { LlamaCloudIndex } from "llamaindex/cloud/LlamaCloudIndex";
 import type { CloudConstructorParams } from "llamaindex/cloud/constants";
+import { EmbeddingConfigType } from "@llamaindex/cloud/api";
 
 export type LlamaCloudDataSourceParams = {
   project?: string;
@@ -76,6 +77,7 @@ function createParams({
     apiKey: process.env.LLAMA_CLOUD_API_KEY,
     baseUrl: process.env.LLAMA_CLOUD_BASE_URL,
     embedding_config: {
+      type: EmbeddingConfigType.OPENAI_EMBEDDING,
       model_name: "text-embedding-ada-002",
     },
   };

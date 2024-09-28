@@ -27,6 +27,27 @@ export const DEMO_BOTS: DemoBot[] = [
     datasource: toLlamaCloudDataSource("documents"),
   },
   {
+    id: "8",
+    avatar: "1f5a5-fe0f",
+    name: "Yinful",
+    botHello: "Hello! How can I help you with Red Hat Linux?",
+    context: [
+      {
+        role: "system",
+        content: TEMPLATE("Yinful"),
+        id: "57ecc063-f1d3-42ea-89b2-bc2d610b4e68",
+      },
+    ],
+    modelConfig: {
+      model: "gpt-4o-mini",
+      temperature: 0.1,
+      maxTokens: 4096,
+      sendMemory: false,
+    },
+    readOnly: true,
+    datasource: toLlamaCloudDataSource("yinful"),
+  },
+  {
     id: "3",
     avatar: "1f5a5-fe0f",
     name: "Red Hat Linux Expert",
