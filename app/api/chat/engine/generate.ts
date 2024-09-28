@@ -128,6 +128,7 @@ async function createPipeline(
       requestBody: {
         name: pipelineName,
         pipeline_type: "MANAGED",
+        // Remove the embedding_config for now as it's causing type errors
       },
     });
     console.log(`Pipeline created successfully. Pipeline ID: ${response.id}`);
@@ -180,7 +181,7 @@ async function generateDatasource(): Promise<void> {
           id: pipelineId,
           name: datasource,
           project_id: projectId,
-          configured_transformations: [],
+          configured_transformations: [], // Add this to satisfy the Pipeline type
         };
       }
       const pipelineId = pipeline.id;
