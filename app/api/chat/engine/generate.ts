@@ -10,11 +10,17 @@ import {
   Pipeline,
 } from "@llamaindex/cloud/api";
 import { initService } from "llamaindex/cloud/utils";
+import { OpenAIEmbedding, Settings } from "llamaindex";
 
 const DATA_DIR = "./datasources";
 
 // Load environment variables from local .env.development.local file
 dotenv.config({ path: ".env.development.local" });
+
+// Set up the embedding model globally
+Settings.embedModel = new OpenAIEmbedding({
+  model: "text-embedding-ada-002",
+});
 
 async function getRuntime(func: () => Promise<void>): Promise<number> {
   const start = Date.now();
