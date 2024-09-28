@@ -3,6 +3,7 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import { getDataSource } from ".";
 import {
+  ApiError,
   FilesService,
   PipelinesService,
   ParsingService,
@@ -24,10 +25,8 @@ async function getRuntime(func: () => Promise<void>): Promise<number> {
 
 async function* walk(dir: string): AsyncGenerator<string> {
   const directory = await fs.opendir(dir);
-
   for await (const dirent of directory) {
     const entryPath = path.join(dir, dirent.name);
-
     if (dirent.isDirectory()) {
       yield* walk(entryPath); // Recursively walk through directories
     } else if (dirent.isFile()) {
@@ -117,15 +116,28 @@ async function createPipeline(
   pipelineName: string,
 ): Promise<string> {
   console.log(`Creating pipeline: ${pipelineName}`);
-  const response = await PipelinesService.createPipelineApiV1PipelinesPost({
-    projectId,
-    requestBody: {
-      name: pipelineName,
-      pipeline_type: "INDEX", // Added the required pipeline_type field
-    },
-  });
-  console.log(`Pipeline created successfully. Pipeline ID: ${response.id}`);
-  return response.id;
+  try {
+    const response = await PipelinesService.createPipelineApiV1PipelinesPost({
+      projectId,
+      requestBody: {
+        name: pipelineName,
+        pipeline_type: "MANAGED",
+      },
+    });
+    console.log(`Pipeline created successfully. Pipeline ID: ${response.id}`);
+    return response.id;
+  } catch (error: unknown) {
+    if (error instanceof ApiError) {
+      console.error(`Error creating pipeline: ${error.message}`);
+      console.error(`Error details: ${JSON.stringify(error.body)}`);
+    } else if (error instanceof Error) {
+      console.error(`Error creating pipeline: ${error.message}`);
+      console.error(`Error stack: ${error.stack}`);
+    } else {
+      console.error(`An unknown error occurred while creating the pipeline`);
+    }
+    throw error;
+  }
 }
 
 async function generateDatasource(): Promise<void> {
@@ -134,9 +146,7 @@ async function generateDatasource(): Promise<void> {
     console.error("Please provide a datasource as an argument.");
     process.exit(1);
   }
-
   console.log(`Generating storage context for datasource '${datasource}'...`);
-
   const ms = await getRuntime(async () => {
     try {
       console.log(`Getting data source for pipeline: ${datasource}`);
@@ -145,10 +155,8 @@ async function generateDatasource(): Promise<void> {
         ensureIndex: false, // Temporarily disable ensureIndex
       });
       console.log(`Data source retrieved successfully`);
-
       const projectId = await index.getProjectId();
       console.log(`Project ID: ${projectId}`);
-
       // Check if the pipeline exists
       const pipelines = await PipelinesService.searchPipelinesApiV1PipelinesGet(
         {
@@ -156,9 +164,7 @@ async function generateDatasource(): Promise<void> {
         },
       );
       console.log(`Found ${pipelines.length} pipelines`);
-
       let pipeline = pipelines.find((p: Pipeline) => p.name === datasource);
-
       if (!pipeline) {
         console.log(
           `Pipeline '${datasource}' not found. Creating a new pipeline.`,
@@ -171,10 +177,8 @@ async function generateDatasource(): Promise<void> {
           configured_transformations: [],
         };
       }
-
       const pipelineId = pipeline.id;
       console.log(`Pipeline ID: ${pipelineId}`);
-
       // walk through the data directory and upload each file to LlamaCloud
       const dataDir = path.join(DATA_DIR, datasource);
       console.log(`Walking through directory: ${dataDir}`);
@@ -188,7 +192,10 @@ async function generateDatasource(): Promise<void> {
         });
       }
     } catch (error: unknown) {
-      if (error instanceof Error) {
+      if (error instanceof ApiError) {
+        console.error(`Error generating datasource: ${error.message}`);
+        console.error(`Error details: ${JSON.stringify(error.body)}`);
+      } else if (error instanceof Error) {
         console.error(`Error generating datasource: ${error.message}`);
         console.error(`Error stack: ${error.stack}`);
       } else {
@@ -215,7 +222,10 @@ async function generateDatasource(): Promise<void> {
     await generateDatasource();
     console.log("Finished generating storage.");
   } catch (error: unknown) {
-    if (error instanceof Error) {
+    if (error instanceof ApiError) {
+      console.error(`An error occurred: ${error.message}`);
+      console.error(`Error details: ${JSON.stringify(error.body)}`);
+    } else if (error instanceof Error) {
       console.error(`An error occurred: ${error.message}`);
       console.error(`Error stack: ${error.stack}`);
     } else {
