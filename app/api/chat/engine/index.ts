@@ -26,7 +26,6 @@ export async function getDataSource(params: LlamaCloudDataSourceParams) {
     checkEnvVars();
     if (params.ensureIndex) {
       console.log("Ensuring index exists...");
-      // ensure that the index exists
       try {
         await LlamaCloudIndex.fromDocuments({
           ...createParams(params),
@@ -38,8 +37,6 @@ export async function getDataSource(params: LlamaCloudDataSourceParams) {
           console.log(
             "Received 400 error, ignoring as it's expected when calling fromDocuments with empty documents",
           );
-          // ignore 400 error, it's caused by calling fromDocuments with empty documents
-          // TODO: fix in LLamaIndexTS
         } else {
           console.error(
             `Error ensuring index: ${e instanceof Error ? e.message : "Unknown error"}`,
@@ -76,6 +73,9 @@ function createParams({
     projectName: project ?? process.env.LLAMA_CLOUD_PROJECT_NAME!,
     apiKey: process.env.LLAMA_CLOUD_API_KEY,
     baseUrl: process.env.LLAMA_CLOUD_BASE_URL,
+    embedding_config: {
+      model_name: "text-embedding-ada-002",
+    },
   };
   console.log(
     `Created params: ${JSON.stringify({ ...params, apiKey: "[REDACTED]" })}`,
