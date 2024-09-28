@@ -37,6 +37,8 @@ export async function getDataSource(params: LlamaCloudDataSourceParams) {
           console.log(
             "Received 400 error, ignoring as it's expected when calling fromDocuments with empty documents",
           );
+          // ignore 400 error, it's caused by calling fromDocuments with empty documents
+          // TODO: fix in LLamaIndexTS
         } else {
           console.error(
             `Error ensuring index: ${e instanceof Error ? e.message : "Unknown error"}`,
