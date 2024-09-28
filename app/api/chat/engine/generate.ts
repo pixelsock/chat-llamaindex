@@ -6,8 +6,10 @@ import {
   FilesService,
   PipelinesService,
   ParsingService,
+  Pipeline,
 } from "@llamaindex/cloud/api";
 import { initService } from "llamaindex/cloud/utils";
+import { LlamaCloudIndex } from "llamaindex/cloud/LlamaCloudIndex";
 
 const DATA_DIR = "./datasources";
 
@@ -107,6 +109,21 @@ async function addFileToPipeline(
   }
 }
 
+async function createPipeline(
+  projectId: string,
+  pipelineName: string,
+): Promise<string> {
+  console.log(`Creating pipeline: ${pipelineName}`);
+  const response = await PipelinesService.createPipelineApiV1PipelinesPost({
+    projectId,
+    requestBody: {
+      name: pipelineName,
+    },
+  });
+  console.log(`Pipeline created successfully. Pipeline ID: ${response.id}`);
+  return response.id;
+}
+
 async function generateDatasource(): Promise<void> {
   const datasource = process.argv[2];
   if (!datasource) {
@@ -121,13 +138,38 @@ async function generateDatasource(): Promise<void> {
       console.log(`Getting data source for pipeline: ${datasource}`);
       const index = await getDataSource({
         pipeline: datasource,
-        ensureIndex: true,
+        ensureIndex: false, // Temporarily disable ensureIndex
       });
       console.log(`Data source retrieved successfully`);
 
       const projectId = await index.getProjectId();
-      const pipelineId = await index.getPipelineId();
-      console.log(`Project ID: ${projectId}, Pipeline ID: ${pipelineId}`);
+      console.log(`Project ID: ${projectId}`);
+
+      // Check if the pipeline exists
+      const pipelines = await PipelinesService.searchPipelinesApiV1PipelinesGet(
+        {
+          projectId,
+        },
+      );
+      console.log(`Found ${pipelines.length} pipelines`);
+
+      let pipeline = pipelines.find((p: Pipeline) => p.name === datasource);
+
+      if (!pipeline) {
+        console.log(
+          `Pipeline '${datasource}' not found. Creating a new pipeline.`,
+        );
+        const pipelineId = await createPipeline(projectId, datasource);
+        pipeline = {
+          id: pipelineId,
+          name: datasource,
+          project_id: projectId,
+          configured_transformations: [],
+        };
+      }
+
+      const pipelineId = pipeline.id;
+      console.log(`Pipeline ID: ${pipelineId}`);
 
       // walk through the data directory and upload each file to LlamaCloud
       const dataDir = path.join(DATA_DIR, datasource);
