@@ -9,7 +9,6 @@ import {
   Pipeline,
 } from "@llamaindex/cloud/api";
 import { initService } from "llamaindex/cloud/utils";
-import { LlamaCloudIndex } from "llamaindex/cloud/LlamaCloudIndex";
 
 const DATA_DIR = "./datasources";
 
@@ -72,7 +71,9 @@ async function addFileToPipeline(
       console.log(`File parsed successfully`);
     } catch (parseError: unknown) {
       console.warn(
-        `Unable to parse file: ${parseError instanceof Error ? parseError.message : "Unknown error"}`,
+        `Unable to parse file: ${
+          parseError instanceof Error ? parseError.message : "Unknown error"
+        }`,
       );
       parseResult = { parsed_content: null, metadata: {} };
     }
@@ -96,7 +97,9 @@ async function addFileToPipeline(
     });
 
     console.log(
-      `Successfully uploaded and processed file: ${uploadFile instanceof File ? uploadFile.name : "unnamed file"}`,
+      `Successfully uploaded and processed file: ${
+        uploadFile instanceof File ? uploadFile.name : "unnamed file"
+      }`,
     );
   } catch (error: unknown) {
     if (error instanceof Error) {
@@ -118,6 +121,7 @@ async function createPipeline(
     projectId,
     requestBody: {
       name: pipelineName,
+      pipeline_type: "INDEX", // Added the required pipeline_type field
     },
   });
   console.log(`Pipeline created successfully. Pipeline ID: ${response.id}`);
@@ -194,14 +198,19 @@ async function generateDatasource(): Promise<void> {
     }
   });
   console.log(
-    `Successfully uploaded and processed documents to LlamaCloud in ${ms / 1000}s.`,
+    `Successfully uploaded and processed documents to LlamaCloud in ${
+      ms / 1000
+    }s.`,
   );
 }
 
 (async () => {
   try {
     console.log("Initializing service...");
-    initService();
+    initService({
+      apiKey: process.env.LLAMA_CLOUD_API_KEY,
+      baseUrl: process.env.LLAMA_CLOUD_BASE_URL,
+    });
     console.log("Service initialized. Starting datasource generation...");
     await generateDatasource();
     console.log("Finished generating storage.");
